@@ -30,6 +30,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -42,6 +44,9 @@ import static java.util.Objects.requireNonNull;
  * {@link RelDataTypeFactory} which supports SQL types.
  */
 public class SqlTypeFactoryImpl extends RelDataTypeFactoryImpl {
+  private final AtomicReferenceArray<SqlTypeWithPrecision> sqlTypesWithPrecision =
+      new AtomicReferenceArray<>(SqlTypeName.values().length);
+
   //~ Constructors -----------------------------------------------------------
 
   public SqlTypeFactoryImpl(RelDataTypeSystem typeSystem) {
@@ -72,12 +77,25 @@ public class SqlTypeFactoryImpl extends RelDataTypeFactoryImpl {
     assertBasic(typeName);
     assert (precision >= 0)
         || (precision == RelDataType.PRECISION_NOT_SPECIFIED);
+    final int typeIndex = typeName.ordinal();
+    final @Nullable Charset defaultCharset =
+        SqlTypeName.CHAR_TYPES.contains(typeName) ? getDefaultCharset() : null;
+    final @Nullable SqlTypeWithPrecision lastType =
+        sqlTypesWithPrecision.get(typeIndex);
+    if (lastType != null
+        && lastType.precision == precision
+        && Objects.equals(lastType.defaultCharset, defaultCharset)) {
+      return lastType.type;
+    }
     // Does not check precision when typeName is SqlTypeName#NULL.
     RelDataType newType = precision == RelDataType.PRECISION_NOT_SPECIFIED
         ? new BasicSqlType(typeSystem, typeName)
         : new BasicSqlType(typeSystem, typeName, precision);
     newType = SqlTypeUtil.addCharsetAndCollation(newType, this);
-    return canonize(newType);
+    newType = canonize(newType);
+    sqlTypesWithPrecision.set(typeIndex,
+        new SqlTypeWithPrecision(precision, defaultCharset, newType));
+    return newType;
   }
 
   @SuppressWarnings("deprecation") // [CALCITE-6598]
@@ -310,6 +328,20 @@ public class SqlTypeFactoryImpl extends RelDataTypeFactoryImpl {
         : "use createStructType() instead";
     assert !SqlTypeName.INTERVAL_TYPES.contains(typeName)
         : "use createSqlIntervalType() instead";
+  }
+
+  /** Most recently created precision for a SQL type that has no scale. */
+  private static class SqlTypeWithPrecision {
+    private final int precision;
+    private final @Nullable Charset defaultCharset;
+    private final RelDataType type;
+
+    private SqlTypeWithPrecision(int precision, @Nullable Charset defaultCharset,
+        RelDataType type) {
+      this.precision = precision;
+      this.defaultCharset = defaultCharset;
+      this.type = type;
+    }
   }
 
   @SuppressWarnings("deprecation") // [CALCITE-6598]

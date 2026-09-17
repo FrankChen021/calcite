@@ -38,6 +38,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -45,6 +46,20 @@ import static org.junit.jupiter.api.Assertions.fail;
  * Test for {@link SqlTypeFactoryImpl}.
  */
 class SqlTypeFactoryTest {
+
+  @Test void testReuseMostRecentSqlTypeWithPrecision() {
+    SqlTypeFixture f = new SqlTypeFixture();
+    RelDataType varchar17 = f.typeFactory.createSqlType(SqlTypeName.VARCHAR, 17);
+    assertSame(varchar17,
+        f.typeFactory.createSqlType(SqlTypeName.VARCHAR, 17));
+
+    RelDataType varchar18 = f.typeFactory.createSqlType(SqlTypeName.VARCHAR, 18);
+    assertThat(varchar18.getPrecision(), is(18));
+    assertThat(f.typeFactory.createSqlType(SqlTypeName.VARCHAR, 17).getPrecision(), is(17));
+
+    RelDataType char17 = f.typeFactory.createSqlType(SqlTypeName.CHAR, 17);
+    assertSame(char17, f.typeFactory.createSqlType(SqlTypeName.CHAR, 17));
+  }
 
   @Test void testLeastRestrictiveWithAny() {
     SqlTypeFixture f = new SqlTypeFixture();
