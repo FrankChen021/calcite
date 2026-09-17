@@ -407,12 +407,10 @@ public class SqlTypeFactoryImpl extends RelDataTypeFactoryImpl {
         } else if (SqlTypeUtil.isLob(type)) {
           resultType = createSqlType(type.getSqlTypeName());
         } else if (SqlTypeUtil.isBoundedVariableWidth(resultType)) {
-          if (resultType.getPrecision() != precision) {
-            resultType =
-                createSqlType(
-                    resultType.getSqlTypeName(),
-                    precision);
-          }
+          resultType =
+              createSqlType(
+                  resultType.getSqlTypeName(),
+                  precision);
         } else {
           // this catch-all case covers type variable, and both fixed
 
@@ -428,13 +426,10 @@ public class SqlTypeFactoryImpl extends RelDataTypeFactoryImpl {
             }
           }
 
-          if (resultType.getSqlTypeName() != newTypeName
-              || resultType.getPrecision() != precision) {
-            resultType =
-                createSqlType(
-                    newTypeName,
-                    precision);
-          }
+          resultType =
+              createSqlType(
+                  newTypeName,
+                  precision);
         }
         Charset charset = null;
         // TODO:  refine collation combination rules
@@ -461,16 +456,11 @@ public class SqlTypeFactoryImpl extends RelDataTypeFactoryImpl {
           }
         }
         if (charset != null) {
-          final SqlCollation resultCollation =
-              collation0 != null ? collation0 : requireNonNull(collation, "collation");
-          if (!charset.equals(resultType.getCharset())
-              || !resultCollation.equals(resultType.getCollation())) {
-            resultType =
-                createTypeWithCharsetAndCollation(
-                    resultType,
-                    charset,
-                    resultCollation);
-          }
+          resultType =
+              createTypeWithCharsetAndCollation(
+                  resultType,
+                  charset,
+                  collation0 != null ? collation0 : requireNonNull(collation, "collation"));
         }
       } else if (SqlTypeUtil.isExactNumeric(type)) {
         if (SqlTypeUtil.isExactNumeric(resultType)) {
