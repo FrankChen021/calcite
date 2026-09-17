@@ -168,7 +168,7 @@ public class RexShuttle implements RexVisitor<RexNode> {
     for (RexNode operand : exprs) {
       RexNode clonedOperand = operand.accept(this);
       if (clonedOperand != operand && clonedOperands == null) {
-        clonedOperands = ImmutableList.builderWithExpectedSize(exprs.size());
+        clonedOperands = ImmutableList.builder();
         clonedOperands.addAll(exprs.subList(0, i));
         if (update != null) {
           update[0] = true;
