@@ -93,6 +93,12 @@ public class SqlShuttle extends SqlBasicVisitor<@Nullable SqlNode> {
     }
   }
 
+  private static @Nullable SqlNode[] copyOperands(SqlCall call) {
+    final List<@Nullable SqlNode> operands =
+        (List<@Nullable SqlNode>) call.getOperandList();
+    return operands.toArray(new SqlNode[0]);
+  }
+
   //~ Inner Classes ----------------------------------------------------------
 
   /**
@@ -102,7 +108,7 @@ public class SqlShuttle extends SqlBasicVisitor<@Nullable SqlNode> {
    */
   protected class CallCopyingArgHandler implements ArgHandler<@Nullable SqlNode> {
     boolean update;
-    @Nullable SqlNode[] clonedOperands;
+    private @Nullable SqlNode @Nullable [] clonedOperands;
     private final SqlCall call;
     private final boolean alwaysCopy;
 
@@ -110,7 +116,7 @@ public class SqlShuttle extends SqlBasicVisitor<@Nullable SqlNode> {
       this.call = call;
       this.update = false;
       this.alwaysCopy = alwaysCopy;
-      this.clonedOperands = alwaysCopy ? copyOperands() : null;
+      this.clonedOperands = alwaysCopy ? copyOperands(call) : null;
     }
 
     @Override public SqlNode result() {
@@ -136,7 +142,7 @@ public class SqlShuttle extends SqlBasicVisitor<@Nullable SqlNode> {
       if (newOperand != operand) {
         update = true;
         if (clonedOperands == null) {
-          clonedOperands = copyOperands();
+          clonedOperands = copyOperands(call);
         }
       }
       if (clonedOperands != null) {
@@ -145,10 +151,5 @@ public class SqlShuttle extends SqlBasicVisitor<@Nullable SqlNode> {
       return newOperand;
     }
 
-    private SqlNode[] copyOperands() {
-      final List<@Nullable SqlNode> operands =
-          (List<@Nullable SqlNode>) call.getOperandList();
-      return operands.toArray(new SqlNode[0]);
-    }
   }
 }
