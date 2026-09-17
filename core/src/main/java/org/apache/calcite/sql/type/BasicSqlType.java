@@ -156,6 +156,9 @@ public class BasicSqlType extends AbstractSqlType {
   BasicSqlType createWithCharsetAndCollation(Charset charset,
       SqlCollation collation) {
     checkArgument(SqlTypeUtil.inCharFamily(this));
+    if (collation == this.collation && charset.equals(getCharset())) {
+      return this;
+    }
     return new BasicSqlType(this.typeSystem, this.typeName, this.isNullable,
         this.precision, this.scale, collation,
         SerializableCharset.forCharset(charset));
