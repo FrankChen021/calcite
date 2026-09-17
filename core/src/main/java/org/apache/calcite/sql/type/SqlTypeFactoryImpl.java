@@ -46,6 +46,8 @@ import static java.util.Objects.requireNonNull;
 public class SqlTypeFactoryImpl extends RelDataTypeFactoryImpl {
   private final AtomicReferenceArray<SqlTypeWithPrecision> sqlTypesWithPrecision =
       new AtomicReferenceArray<>(SqlTypeName.values().length);
+  private final AtomicReferenceArray<DecoratedSqlType> decoratedSqlTypes =
+      new AtomicReferenceArray<>(SqlTypeName.values().length);
 
   //~ Constructors -----------------------------------------------------------
 
@@ -186,7 +188,17 @@ public class SqlTypeFactoryImpl extends RelDataTypeFactoryImpl {
     RelDataType newType;
     if (type instanceof BasicSqlType) {
       BasicSqlType sqlType = (BasicSqlType) type;
+      int index = sqlType.getSqlTypeName().ordinal();
+      @Nullable DecoratedSqlType cached = decoratedSqlTypes.get(index);
+      if (cached != null && cached.source == type
+          && cached.charset.equals(charset) && cached.collation == collation) {
+        return cached.result;
+      }
       newType = sqlType.createWithCharsetAndCollation(charset, collation);
+      newType = canonize(newType);
+      decoratedSqlTypes.set(index,
+          new DecoratedSqlType(sqlType, charset, collation, newType));
+      return newType;
     } else if (type instanceof JavaType) {
       JavaType javaType = (JavaType) type;
       newType =
@@ -341,6 +353,22 @@ public class SqlTypeFactoryImpl extends RelDataTypeFactoryImpl {
       this.precision = precision;
       this.defaultCharset = defaultCharset;
       this.type = type;
+    }
+  }
+
+  /** Most recent charset/collation decoration for a SQL type name. */
+  private static class DecoratedSqlType {
+    private final BasicSqlType source;
+    private final Charset charset;
+    private final SqlCollation collation;
+    private final RelDataType result;
+
+    DecoratedSqlType(BasicSqlType source, Charset charset, SqlCollation collation,
+        RelDataType result) {
+      this.source = source;
+      this.charset = charset;
+      this.collation = collation;
+      this.result = result;
     }
   }
 

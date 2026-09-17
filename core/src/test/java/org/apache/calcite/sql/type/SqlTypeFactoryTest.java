@@ -21,12 +21,14 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeFieldImpl;
 import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.rel.type.StructKind;
+import org.apache.calcite.sql.SqlCollation;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +61,29 @@ class SqlTypeFactoryTest {
 
     RelDataType char17 = f.typeFactory.createSqlType(SqlTypeName.CHAR, 17);
     assertSame(char17, f.typeFactory.createSqlType(SqlTypeName.CHAR, 17));
+  }
+
+  @Test void testCachedCharsetAndCollationDecoration() {
+    SqlTypeFixture f = new SqlTypeFixture();
+    RelDataTypeFactory typeFactory = f.typeFactory;
+    RelDataType source = typeFactory.createSqlType(SqlTypeName.VARCHAR, 17);
+    RelDataType decorated =
+        typeFactory.createTypeWithCharsetAndCollation(
+            source, StandardCharsets.UTF_8, SqlCollation.COERCIBLE);
+    assertSame(
+        decorated,
+        typeFactory.createTypeWithCharsetAndCollation(
+            source, StandardCharsets.UTF_8, SqlCollation.COERCIBLE));
+
+    RelDataType differentCharset =
+        typeFactory.createTypeWithCharsetAndCollation(
+            source, StandardCharsets.UTF_16, SqlCollation.COERCIBLE);
+    assertThat(differentCharset.getCharset(), is(StandardCharsets.UTF_16));
+    RelDataType otherSource = typeFactory.createSqlType(SqlTypeName.VARCHAR, 18);
+    RelDataType other =
+        typeFactory.createTypeWithCharsetAndCollation(
+            otherSource, StandardCharsets.UTF_8, SqlCollation.COERCIBLE);
+    assertThat(other.getPrecision(), is(18));
   }
 
   @Test void testLeastRestrictiveWithAny() {
